@@ -1,0 +1,1 @@
+"""NumPy Vectorization Challenge Package"""
