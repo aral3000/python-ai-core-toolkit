@@ -77,7 +77,7 @@ def test_scaled_dot_product_attention_with_mask():
     batch_size = 1
     seq_len = 3
     d_k = 4
-    d_v = 4
+    d_v = 3
 
     Q = np.ones((batch_size, seq_len, d_k))
     K = np.ones((batch_size, seq_len, d_k))
