@@ -6,48 +6,44 @@ Task:
 Implement pure, chainable DataFrame transformations for machine learning preprocessing.
 """
 
-from typing import Dict, Any
+from typing import Dict
 import numpy as np
 import pandas as pd
 
 
 def clean_and_impute(df: pd.DataFrame, strategy: Dict[str, str]) -> pd.DataFrame:
     """
-    Imputes missing values in `df` based on `strategy`.
-    
-    Parameters:
-        df: Input DataFrame (must NOT be mutated in-place)
-        strategy: Dict mapping column name to imputation method:
-                  - 'mean': Replace NaN with column arithmetic mean
-                  - 'median': Replace NaN with column median
-                  - 'mode': Replace NaN with the most frequent value
-                  - 'zero': Replace NaN with 0
-                  
-    Returns:
-        New pandas DataFrame with imputed columns.
+    Imputes missing values in `df` based on `strategy` without mutating `df` in-place.
     """
-    # TODO: Athallah - implement clean_and_impute without mutating input df
-    raise NotImplementedError("TODO: Athallah - implement clean_and_impute")
+    out = df.copy()
+    for col, method in strategy.items():
+        if col not in out.columns:
+            continue
+        if method == "mean":
+            fill_val = out[col].mean()
+        elif method == "median":
+            fill_val = out[col].median()
+        elif method == "mode":
+            modes = out[col].mode(dropna=True)
+            fill_val = modes.iloc[0] if not modes.empty else np.nan
+        elif method == "zero":
+            fill_val = 0.0
+        else:
+            raise ValueError(f"Unsupported imputation strategy: {method}")
+        out[col] = out[col].fillna(fill_val)
+    return out
 
 
 def encode_cyclical_features(df: pd.DataFrame, col: str, max_val: float) -> pd.DataFrame:
     """
-    Encodes a periodic/cyclical feature (e.g. hour 0-23, month 1-12)
-    into two continuous orthogonal circular coordinates using sine and cosine:
-        sin_val = sin(2 * pi * x / max_val)
-        cos_val = cos(2 * pi * x / max_val)
-        
-    Parameters:
-        df: Input DataFrame
-        col: Target column name
-        max_val: Maximum cyclical period (e.g. 24.0 for hours, 12.0 for months)
-        
-    Returns:
-        New DataFrame containing two additional columns:
-        f"{col}_sin" and f"{col}_cos".
+    Encodes a periodic/cyclical feature into two continuous orthogonal circular coordinates
+    using sine and cosine.
     """
-    # TODO: Athallah - implement cyclical sin/cos transformation
-    raise NotImplementedError("TODO: Athallah - implement encode_cyclical_features")
+    out = df.copy()
+    angle = 2.0 * np.pi * out[col] / max_val
+    out[f"{col}_sin"] = np.sin(angle)
+    out[f"{col}_cos"] = np.cos(angle)
+    return out
 
 
 def compute_rolling_features(
@@ -58,17 +54,13 @@ def compute_rolling_features(
 ) -> pd.DataFrame:
     """
     Computes rolling mean and rolling standard deviation per group.
-    
-    Parameters:
-        df: Input DataFrame (assumed pre-sorted chronologically)
-        group_col: Grouping entity column (e.g. 'user_id', 'sensor_id')
-        target_col: Numeric feature column to aggregate
-        window: Window size for rolling statistics
-        
-    Returns:
-        New DataFrame containing original columns plus:
-        f"{target_col}_rolling_mean_{window}" and f"{target_col}_rolling_std_{window}"
-        (with NaN filled with 0.0 or backward-filled).
     """
-    # TODO: Athallah - implement rolling window per group
-    raise NotImplementedError("TODO: Athallah - implement compute_rolling_features")
+    out = df.copy()
+    grouped_rolling = out.groupby(group_col)[target_col].rolling(window=window)
+    out[f"{target_col}_rolling_mean_{window}"] = (
+        grouped_rolling.mean().reset_index(level=0, drop=True).fillna(0.0)
+    )
+    out[f"{target_col}_rolling_std_{window}"] = (
+        grouped_rolling.std().reset_index(level=0, drop=True).fillna(0.0)
+    )
+    return out
